@@ -144,10 +144,13 @@ getcmd(char *buf, int nbuf)
 int
 main(void)
 {
+  // TODO 为什么这里是static?
   static char buf[100];
   int fd;
 
   // Ensure that three file descriptors are open.
+  // 这里巧妙的利用了fd如果大于等于3，那么就说明012已经被占用了
+  // TODO 这里打开console是有什么含义么
   while((fd = open("console", O_RDWR)) >= 0){
     if(fd >= 3){
       close(fd);
@@ -164,8 +167,14 @@ main(void)
         printf(2, "cannot cd %s\n", buf+3);
       continue;
     }
-    if(fork1() == 0)
+    
+    // 子进程执行
+    if(fork1() == 0){
+      // 这个函数会自己返回，所以不会执行到wait那里
       runcmd(parsecmd(buf));
+    }
+
+    // 父进程执行
     wait();
   }
   exit();
