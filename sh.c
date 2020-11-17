@@ -32,6 +32,7 @@ struct redircmd {
   int fd;
 };
 
+// 本质上就是三个int
 struct pipecmd {
   int type;
   struct cmd *left;
@@ -97,13 +98,18 @@ runcmd(struct cmd *cmd)
     runcmd(lcmd->right);
     break;
 
+  // 管道的实现
   case PIPE:
     pcmd = (struct pipecmd*)cmd;
     if(pipe(p) < 0)
       panic("pipe");
     if(fork1() == 0){
+      // 子进程关闭标准输出
       close(1);
+      // TODO 其实这里我一开始很疑惑，为什么没有返回值来接受这个dup，因为没有必要，它就是希望p[1]代表的文件描述符成为标准输出
+      // 复制管道的第二个描述符
       dup(p[1]);
+      // 关闭所有的管道
       close(p[0]);
       close(p[1]);
       runcmd(pcmd->left);
@@ -160,6 +166,7 @@ main(void)
 
   // Read and run input commands.
   while(getcmd(buf, sizeof(buf)) >= 0){
+    // cd这个命令是内置的，因为无法通过fork去执行
     if(buf[0] == 'c' && buf[1] == 'd' && buf[2] == ' '){
       // Chdir must be called by the parent, not the child.
       buf[strlen(buf)-1] = 0;  // chop \n
